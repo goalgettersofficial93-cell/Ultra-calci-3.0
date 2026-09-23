@@ -305,9 +305,27 @@
   var modal = document.getElementById('ggVideoModal');
   var player = document.getElementById('ggVideo');
   var close = document.getElementById('ggVideoClose');
+  // The source page moved its media files to a new Heroku app. Keep the
+  // copied catalog working without having to rewrite every item in rawData.
+  var ACTIVE_MEDIA_HOST = 'https://fs1enchanted-flower-68930222-873172716e82.herokuapp.com';
+  var LEGACY_MEDIA_HOST = 'fs1qydv17g1-161-162e5df28a45.herokuapp.com';
+  function repairMediaUrl(url){
+    try {
+      var parsed = new URL(url, window.location.href);
+      if (parsed.hostname === LEGACY_MEDIA_HOST) {
+        parsed.protocol = 'https:';
+        parsed.host = ACTIVE_MEDIA_HOST.replace(/^https?:\/\//, '');
+      }
+      return parsed.toString();
+    } catch (e) {
+      return url;
+    }
+  }
+  window.goalGettersRepairMediaUrl = repairMediaUrl;
   function directStream(url){
-    var match = url.match(/\/watch\/([^/?#]+)/);
-    return match ? 'https://fs1qydv17g1-161-162e5df28a45.herokuapp.com/dl/' + match[1] : url;
+    var repaired = repairMediaUrl(url);
+    var match = repaired.match(/\/watch\/([^/?#]+)/);
+    return match ? ACTIVE_MEDIA_HOST + '/dl/' + encodeURIComponent(match[1]) : repaired;
   }
   function closePlayer(){
     player.pause();
@@ -493,14 +511,16 @@ function createFileItemEl(item, query){
   if (item.video){
     const a = document.createElement('a');
     a.className = 'open-btn video';
-    a.href = item.video; a.target = '_blank'; a.rel = 'noopener';
+    a.href = (window.goalGettersRepairMediaUrl || function(url){ return url; })(item.video);
+    a.target = '_blank'; a.rel = 'noopener';
     a.innerHTML = ICONS.video + '<span>Video</span>';
     actions.appendChild(a);
   }
   if (item.pdf){
     const a = document.createElement('a');
     a.className = 'open-btn pdf';
-    a.href = item.pdf; a.target = '_blank'; a.rel = 'noopener';
+    a.href = (window.goalGettersRepairMediaUrl || function(url){ return url; })(item.pdf);
+    a.target = '_blank'; a.rel = 'noopener';
     a.innerHTML = ICONS.pdf + '<span>PDF</span>';
     actions.appendChild(a);
   }
